@@ -7,6 +7,7 @@ var __export = (target, all) => {
 // server/index.ts
 import "dotenv/config";
 import express2 from "express";
+import path3 from "path";
 
 // server/routes.ts
 import { createServer } from "http";
@@ -666,26 +667,15 @@ async function setupVite(app2, server) {
     }
   });
 }
-function serveStatic(app2) {
-  const distPath = path2.resolve(import.meta.dirname, "public");
-  if (!fs.existsSync(distPath)) {
-    throw new Error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`
-    );
-  }
-  app2.use(express.static(distPath));
-  app2.use("*", (_req, res) => {
-    res.sendFile(path2.resolve(distPath, "index.html"));
-  });
-}
 
 // server/index.ts
 var app = express2();
 app.use(express2.json());
 app.use(express2.urlencoded({ extended: false }));
+var index_default = app;
 app.use((req, res, next) => {
   const start = Date.now();
-  const path3 = req.path;
+  const pathUrl = req.path;
   let capturedJsonResponse = void 0;
   const originalResJson = res.json;
   res.json = function(bodyJson, ...args) {
@@ -694,49 +684,71 @@ app.use((req, res, next) => {
   };
   res.on("finish", () => {
     const duration = Date.now() - start;
-    if (path3.startsWith("/api")) {
-      let logLine = `${req.method} ${path3} ${res.statusCode} in ${duration}ms`;
+    if (pathUrl.startsWith("/api")) {
+      let logLine = `${req.method} ${pathUrl} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+        try {
+          logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+        } catch {
+        }
       }
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "\u2026";
+      if (logLine.length > 240) {
+        logLine = logLine.slice(0, 239) + "\u2026";
       }
       log(logLine);
     }
   });
   next();
 });
-(async () => {
+app.use((err, _req, res, _next) => {
+  const status = err?.status || err?.statusCode || 500;
+  const message = err?.message || "Internal Server Error";
+  res.status(status).json({ message });
+  console.error("Unhandled error:", err);
+});
+async function init() {
   const server = await registerRoutes(app);
-  app.use((err, _req, res, _next) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-    res.status(status).json({ message });
-    throw err;
-  });
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
-    serveStatic(app);
+    const clientDist = path3.join(__dirname, "..", "dist", "public");
+    console.log("Serving static from:", clientDist);
+    app.use(express2.static(clientDist));
+    app.get(/^\/(?!api).*/, (req, res) => {
+      res.sendFile(path3.join(clientDist, "index.html"), (err) => {
+        if (err) {
+          console.error("Error sending index.html", err);
+          res.status(500).send("Server error");
+        }
+      });
+    });
   }
   const port = parseInt(process.env.PORT || "5000", 10);
-  const listenOptions = { port, host: "0.0.0.0" };
-  if (process.platform !== "win32") {
-    listenOptions.reusePort = true;
-  }
-  server.listen(listenOptions, () => {
-    log(`serving on port ${port}`);
-  });
-  if (process.env.SEED_DB === "true") {
-    (async () => {
+  if (!(process.env.VERCEL === "1" || process.env.VERCEL === "true")) {
+    const listenOptions = { port, host: "0.0.0.0" };
+    if (process.platform !== "win32") listenOptions.reusePort = true;
+    server.listen(listenOptions, () => {
+      log(`serving on port ${port}`);
+    });
+    if (process.env.SEED_DB === "true") {
       try {
-        console.log("SEED_DB=true \u2014 seeding database now...");
+        console.log("SEED_DB=true \u2014 seeding database...");
         await seedDatabase();
         console.log("Seeding complete.");
       } catch (e) {
         console.error("Seeding failed:", e);
       }
-    })();
+    }
+  } else {
+    log("Running in Vercel serverless mode (export only, no listen).");
   }
-})();
+}
+init().catch((err) => {
+  console.error("Failed to init server:", err);
+  if (!(process.env.VERCEL === "1" || process.env.VERCEL === "true")) {
+    process.exit(1);
+  }
+});
+export {
+  index_default as default
+};
