@@ -128,30 +128,12 @@ Example Endpoints:
 
 ---
 
-## 🧩 Folder Structure
-
-```
-Notes-App/
-│
-├── src/
-│   ├── controllers/
-│   ├── middleware/
-│   ├── models/
-│   ├── routes/
-│   └── index.js / server.js
-│
-├── public/ (Frontend)
-├── package.json
-└── README.md
-```
-
----
 
 ## 📨 Submission Information
 
 **Candidate:** Sanket Vasant Patil  
 **Role:** Backend Developer Intern  
-**Email:** sanketpatil@example.com  
+**Email:** sanketpatil.m5@gmail.com  
 **Location:** Mumbai, India  
 
 To run locally, simply install dependencies, configure `.env`, and start the server.  
@@ -159,16 +141,5 @@ Both backend and frontend are included in the same folder for simplicity.
 
 ---
 
-### 📧 Contact for Verification
-
-If any issues arise while testing, please reach out:
-```
-saami@bajarangs.com  
-nagasai@bajarangs.com  
-chetan@bajarangs.com  
-CC: sonika@primetrade.ai
-```
-
----
 
 **Made with ❤️ by Sanket Vasant Patil**
